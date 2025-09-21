@@ -1,0 +1,41 @@
+name: FB Shorts Bot
+
+# Runs at 5:00 AM IST and 5:00 PM IST (GitHub Actions uses UTC)
+on:
+  schedule:
+    - cron: '30 23 * * *'   # 05:00 IST (previous day 23:30 UTC -> 05:00 IST)
+    - cron: '30 11 * * *'   # 17:00 IST (11:30 UTC -> 17:00 IST)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Run bot
+        env:
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          VIDEO_URL: ${{ secrets.VIDEO_URL }}
+          HASHTAGS: ${{ secrets.HASHTAGS }}
+        run: python bot.py
