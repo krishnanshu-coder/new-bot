@@ -1,61 +1,40 @@
-name: FB Shorts Bot
+name: Automated Video Shorts Bot
 
-# Schedule: 05:00 AM IST and 05:00 PM IST
 on:
   schedule:
-    - cron: '30 23 * * *'   # 05:00 IST (23:30 UTC previous day)
-    - cron: '30 11 * * *'   # 17:00 IST (11:30 UTC)
-  workflow_dispatch:         # Manual trigger for testing
-
-permissions:
-  contents: write
+    # Run at 5:00 AM IST (23:30 UTC previous day)
+    - cron: '30 23 * * *'
+    # Run at 5:00 PM IST (11:30 UTC same day)  
+    - cron: '30 11 * * *'
+  workflow_dispatch: # Allow manual trigger for testing
 
 jobs:
-  run-bot:
+  upload-shorts:
     runs-on: ubuntu-latest
-
+    
     steps:
-      # Checkout repository
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-          fetch-depth: 0
-
-      # Install ffmpeg
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      # Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      # Install dependencies
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      # Debug: Check secrets are available
-      - name: Debug environment variables
-        run: |
-          echo "FB_PAGE_TOKEN is set: $([[ -n "$FB_PAGE_TOKEN" ]] && echo 'Yes' || echo 'No')"
-          echo "FB_PAGE_ID is set: $([[ -n "$FB_PAGE_ID" ]] && echo 'Yes' || echo 'No')"
-          echo "VIDEO_URL is set: $([[ -n "$VIDEO_URL" ]] && echo 'Yes' || echo 'No')"
-          echo "HASHTAGS is set: $([[ -n "$HASHTAGS" ]] && echo 'Yes' || echo 'No')"
-        env:
-          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          VIDEO_URL: ${{ secrets.VIDEO_URL }}
-          HASHTAGS: ${{ secrets.HASHTAGS }}
-
-      # Run the bot
-      - name: Run bot
-        env:
-          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
-          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
-          VIDEO_URL: ${{ secrets.VIDEO_URL }}
-          HASHTAGS: ${{ secrets.HASHTAGS }}
-        run: python bot.py
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install FFmpeg
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Video Shorts Bot
+      env:
+        FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+        FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+        VIDEO_URLS: ${{ secrets.VIDEO_URLS }}
+        TZ: Asia/Kolkata
+      run: python bot.py
