@@ -18,8 +18,8 @@ logging.basicConfig(
 class AutomatedVideoShortsBot:
     def __init__(self):
         # Load configuration from environment variables
-        self.page_access_token = os.getenv('FB_PAGE_TOKEN')
-        self.page_id = os.getenv('FB_PAGE_ID')
+        self.page_access_token = os.getenv('FACEBOOK_PAGE_TOKEN')
+        self.page_id = os.getenv('FACEBOOK_PAGE_ID')
         self.video_urls = self.load_video_urls()
         self.facebook_api_base = "https://graph.facebook.com/v18.0"
         self.temp_dir = tempfile.mkdtemp()
