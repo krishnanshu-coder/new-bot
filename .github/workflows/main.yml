@@ -35,6 +35,6 @@ jobs:
       env:
         FB_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
         FB_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
-        VIDEO_URLS: ${{ secrets.VIDEO_URLS }}
+        VIDEO_URLS: ${{ secrets.VIDEO_URL }}
         TZ: Asia/Kolkata
       run: python bot.py
