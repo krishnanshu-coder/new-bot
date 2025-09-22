@@ -1,4 +1,4 @@
-name: Automated Video Shorts Bot
+name: Automated Video Uploader
 
 on:
   schedule:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch: # Allow manual trigger for testing
 
 jobs:
-  upload-shorts:
+  upload-videos:
     runs-on: ubuntu-latest
     
     steps:
@@ -21,20 +21,14 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: Install FFmpeg
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ffmpeg
-    
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Run Video Shorts Bot
+    - name: Run Video Uploader Bot
       env:
         FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
         FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
-        VIDEO_URLS: ${{ secrets.VIDEO_URLS }}
         TZ: Asia/Kolkata
       run: python bot.py
