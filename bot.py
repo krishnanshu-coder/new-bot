@@ -100,18 +100,24 @@ class AutomatedVideoShortsBot:
         output_file = os.path.join(self.temp_dir, f"short_{timestamp}.mp4")
         
         try:
-            # Optimized FFmpeg command for GitHub Actions
+            # Fixed FFmpeg command - split the input properly
             cmd = [
                 'ffmpeg', '-i', input_video,
                 '-ss', str(start_time),
                 '-t', str(duration),
-                '-vf', (
-                    # Create blurred background and overlay main video
-                    '[0:v]scale=1080:1920:force_original_aspect_ratio=increase,'
-                    'crop=1080:1920,boxblur=20[bg];'
-                    '[0:v]scale=1080:1920:force_original_aspect_ratio=decrease[main];'
-                    '[bg][main]overlay=(W-w)/2:(H-h)/2'
+                '-filter_complex', (
+                    # Split input into two streams
+                    '[0:v]split=2[main][bg];'
+                    # Create blurred background
+                    '[bg]scale=1080:1920:force_original_aspect_ratio=increase,'
+                    'crop=1080:1920,boxblur=20[blurred];'
+                    # Scale main video to fit
+                    '[main]scale=1080:1920:force_original_aspect_ratio=decrease[scaled];'
+                    # Overlay scaled video on blurred background
+                    '[blurred][scaled]overlay=(W-w)/2:(H-h)/2[out]'
                 ),
+                '-map', '[out]',
+                '-map', '0:a?',  # Include audio if present
                 '-c:a', 'aac', '-b:a', '128k',
                 '-c:v', 'libx264', '-preset', 'fast', '-crf', '28',
                 '-r', '30', '-movflags', '+faststart',
@@ -132,8 +138,7 @@ class AutomatedVideoShortsBot:
                 
         except Exception as e:
             logging.error(f"Error in create_vertical_short: {e}")
-            return None
-    
+            return None    
     def generate_hashtags(self, post_time):
         """Generate engaging hashtags for the post"""
         base_hashtags = ["#viral", "#shorts", "#trending"]
@@ -321,4 +326,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
