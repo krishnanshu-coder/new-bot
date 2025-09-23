@@ -29,6 +29,7 @@ class AutomatedVideoShortsBot:
             raise ValueError("Missing Facebook credentials in environment variables")
         
         logging.info("Bot initialized successfully")
+    
     def load_video_urls(self):
         # First try environment variable
         urls_env = os.getenv('VIDEO_URLS')
@@ -44,16 +45,9 @@ class AutomatedVideoShortsBot:
                 logging.info(f"Loaded {len(urls)} video URLs from video_list.txt")
                 return urls
 
-    # Otherwise load from video_list.txt
-    elif os.path.exists("video_list.txt"):
-        with open("video_list.txt", "r") as f:
-            urls = [line.strip() for line in f if line.strip()]
-            logging.info(f"Loaded {len(urls)} video URLs from video_list.txt")
-            return urls
-
-    else:
-        logging.error("No VIDEO_URLS env or video_list.txt found")
-        return []
+        else:
+            logging.error("No VIDEO_URLS env or video_list.txt found")
+            return []
     
     def download_video(self, video_url):
         """Download video from URL to temporary directory"""
@@ -340,6 +334,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
