@@ -32,12 +32,12 @@ class AutomatedVideoShortsBot:
     
     def load_video_urls(self):
         # First try environment variable
-    urls_env = os.getenv('VIDEO_URLS')
-    if urls_env:
-    urls = [url.strip() for url in urls_env.split(',') if url.strip()]
-    logging.info(f"Loaded {len(urls)} video URLs from env")
-    return urls
-
+        urls_env = os.getenv('VIDEO_URLS')
+        if urls_env:
+            urls = [url.strip() for url in urls_env.split(',') if url.strip()]
+           logging.info(f"Loaded {len(urls)} video URLs from env")
+           return urls
+        
         # Otherwise load from video_list.txt
         elif os.path.exists("video_list.txt"):
             with open("video_list.txt", "r") as f:
@@ -335,4 +335,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
