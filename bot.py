@@ -142,8 +142,6 @@ class SimpleVideoUploadBot:
                         return video_id
                     else:
                         logging.error(f"❌ Upload failed: {result}")
-                        print("Facebook API Response:", response.text)
-                        print("Response Headers:", response.headers)
                         
             except Exception as e:
                 logging.error(f"❌ Error uploading to Facebook (attempt {attempt + 1}): {e}")
@@ -258,4 +256,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
