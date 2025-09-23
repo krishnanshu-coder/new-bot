@@ -146,7 +146,8 @@ class AutomatedVideoShortsBot:
                 
         except Exception as e:
             logging.error(f"Error in create_vertical_short: {e}")
-            return None    
+            return None
+    
     def generate_hashtags(self, post_time):
         """Generate engaging hashtags for the post"""
         base_hashtags = ["#viral", "#shorts", "#trending"]
@@ -334,11 +335,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
