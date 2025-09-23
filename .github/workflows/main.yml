@@ -2,33 +2,36 @@ name: Automated Video Uploader
 
 on:
   schedule:
-    # Run at 5:00 AM IST (23:30 UTC previous day)
-    - cron: '30 23 * * *'
-    # Run at 5:00 PM IST (11:30 UTC same day)  
-    - cron: '30 11 * * *'
-  workflow_dispatch: # Allow manual trigger for testing
+    # These values are in UTC. Example below posts at 5:00 AM IST and 5:00 PM IST:
+    - cron: '30 23 * * *'   # 23:30 UTC = 05:00 IST (next day)
+    - cron: '30 11 * * *'   # 11:30 UTC = 17:00 IST (same day)
+  workflow_dispatch: {}
 
 jobs:
-  upload-videos:
+  upload:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 120
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-    
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run Video Uploader Bot
-      env:
-        FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
-        FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
-        TZ: Asia/Kolkata
-      run: python bot.py
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      - name: Write credentials.json from secret
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+        run: |
+          printf '%s' "$GDRIVE_CREDENTIALS" > credentials.json
+
+      - name: Run uploader
+        env:
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          TZ: Asia/Kolkata
+        run: python bot.py
