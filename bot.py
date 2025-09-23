@@ -29,8 +29,7 @@ class AutomatedVideoShortsBot:
             raise ValueError("Missing Facebook credentials in environment variables")
         
         logging.info("Bot initialized successfully")
-    
-    def load_video_urls(self):
+ def load_video_urls(self):
     # First try environment variable
     urls_env = os.getenv('VIDEO_URLS')
     if urls_env:
@@ -334,6 +333,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
