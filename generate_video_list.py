@@ -31,6 +31,7 @@ def main():
             f.write(f"https://drive.google.com/uc?export=download&id={file['id']}\n")
 
     print(f"✅ video_list.txt created with {len(files)} videos.")
+    print(open("video_list.txt").read())
 
 if __name__ == "__main__":
     main()
