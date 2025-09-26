@@ -1,218 +1,211 @@
-# upload_video.py
 import os
+import logging
 import json
 import requests
-import pickle
+import base64
 from datetime import datetime
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
+from googleapiclient.errors import HttpError
 import io
-import logging
+from googleapiclient.http import MediaIoBaseDownload
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# --- Configuration ---
+# These are now loaded from environment variables or GitHub Secrets
+FACEBOOK_PAGE_TOKEN = os.getenv('FACEBOOK_PAGE_TOKEN')
+FACEBOOK_PAGE_ID = os.getenv('FACEBOOK_PAGE_ID')
+GDRIVE_FOLDER_ID = os.getenv('GDRIVE_FOLDER_ID')
+HASHTAGS = os.getenv('HASHTAGS', '#video #upload')
+GDRIVE_TOKEN_BASE64 = os.getenv('GDRIVE_TOKEN_BASE64') # <<< MODIFIED: For server auth
+
+# --- Constants ---
+SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
+TOKEN_FILE = 'token.pickle'
+CREDENTIALS_FILE = 'credentials.json'
+UPLOADED_VIDEOS_FILE = 'uploaded_videos.json'
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Scopes for Google Drive API
-SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
-
-class FacebookVideoUploader:
-    def __init__(self):
-        self.facebook_token = os.getenv('FACEBOOK_ACCESS_TOKEN')
-        self.page_id = os.getenv('FACEBOOK_PAGE_ID')
-        self.drive_folder_id = os.getenv('GOOGLE_DRIVE_FOLDER_ID')
-        self.uploaded_videos_file = 'uploaded_videos.json'
-        
-        # Load previously uploaded videos
-        self.uploaded_videos = self.load_uploaded_videos()
-        
-    def authenticate_google_drive(self):
-        """Authenticate with Google Drive API"""
-        creds = None
-        
-        # Check if token.pickle exists
-        if os.path.exists('token.pickle'):
-            with open('token.pickle', 'rb') as token:
-                creds = pickle.load(token)
-                
-        # If there are no valid credentials, get them
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
-                creds = flow.run_local_server(port=0)
-                
-            # Save credentials for next run
-            with open('token.pickle', 'wb') as token:
-                pickle.dump(creds, token)
-                
-        return build('drive', 'v3', credentials=creds)
+def authenticate_google_drive():
+    """Authenticate and return Google Drive service."""
+    creds = None
     
-    def load_uploaded_videos(self):
-        """Load the list of previously uploaded videos"""
+    # <<< MODIFIED: Server-friendly authentication flow
+    # On a server, we'll create the token file from a Base64 environment variable
+    if GDRIVE_TOKEN_BASE64:
+        logger.info("Found Base64 token. Decoding to token.pickle file.")
         try:
-            with open(self.uploaded_videos_file, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            return []
-    
-    def save_uploaded_videos(self):
-        """Save the list of uploaded videos"""
-        with open(self.uploaded_videos_file, 'w') as f:
-            json.dump(self.uploaded_videos, f)
-    
-    def get_videos_from_drive(self, service):
-        """Get video files from Google Drive folder"""
-        try:
-            # Query for video files in the specified folder
-            query = f"'{self.drive_folder_id}' in parents and (mimeType contains 'video/')"
-            results = service.files().list(
-                q=query,
-                fields="nextPageToken, files(id, name, mimeType, createdTime)"
-            ).execute()
-            
-            videos = results.get('files', [])
-            
-            # Filter out already uploaded videos
-            new_videos = [v for v in videos if v['id'] not in self.uploaded_videos]
-            
-            # Sort by creation time (oldest first)
-            new_videos.sort(key=lambda x: x['createdTime'])
-            
-            return new_videos
-            
+            decoded_token = base64.b64decode(GDRIVE_TOKEN_BASE64)
+            with open(TOKEN_FILE, 'wb') as token:
+                token.write(decoded_token)
         except Exception as e:
-            logger.error(f"Error getting videos from Drive: {e}")
-            return []
-    
-    def download_video(self, service, file_id, filename):
-        """Download video from Google Drive"""
-        try:
-            request = service.files().get_media(fileId=file_id)
-            file_path = f"temp_{filename}"
-            
-            with open(file_path, 'wb') as f:
-                downloader = MediaIoBaseDownload(f, request)
-                done = False
-                while done is False:
-                    status, done = downloader.next_chunk()
-                    
-            return file_path
-            
-        except Exception as e:
-            logger.error(f"Error downloading video {filename}: {e}")
+            logger.error(f"Could not decode or write the Base64 token: {e}")
             return None
-    
-    def upload_to_facebook(self, video_path, title):
-        """Upload video to Facebook page"""
+
+    if os.path.exists(TOKEN_FILE):
         try:
-            # Step 1: Initialize upload
-            init_url = f"https://graph.facebook.com/v18.0/{self.page_id}/videos"
-            init_params = {
-                'access_token': self.facebook_token,
-                'upload_phase': 'start',
-                'file_size': os.path.getsize(video_path)
-            }
-            
-            init_response = requests.post(init_url, params=init_params)
-            init_data = init_response.json()
-            
-            if 'video_id' not in init_data:
-                logger.error(f"Failed to initialize upload: {init_data}")
-                return False
-            
-            video_id = init_data['video_id']
-            upload_session_id = init_data['upload_session_id']
-            
-            # Step 2: Upload video file
-            upload_url = f"https://graph.facebook.com/v18.0/{self.page_id}/videos"
-            
-            with open(video_path, 'rb') as video_file:
-                upload_params = {
-                    'access_token': self.facebook_token,
-                    'upload_phase': 'transfer',
-                    'upload_session_id': upload_session_id,
-                    'start_offset': 0
-                }
-                
-                files = {'video_file_chunk': video_file}
-                upload_response = requests.post(upload_url, params=upload_params, files=files)
-                upload_data = upload_response.json()
-                
-                if not upload_data.get('success'):
-                    logger.error(f"Failed to upload video chunk: {upload_data}")
-                    return False
-            
-            # Step 3: Finish upload and publish
-            finish_url = f"https://graph.facebook.com/v18.0/{self.page_id}/videos"
-            finish_params = {
-                'access_token': self.facebook_token,
-                'upload_phase': 'finish',
-                'upload_session_id': upload_session_id,
-                'title': title,
-                'description': f'Auto-uploaded video: {title}',
-                'published': True
-            }
-            
-            finish_response = requests.post(finish_url, params=finish_params)
-            finish_data = finish_response.json()
-            
-            if 'success' in finish_data and finish_data['success']:
-                logger.info(f"Successfully uploaded video: {title}")
-                return True
-            else:
-                logger.error(f"Failed to finish upload: {finish_data}")
-                return False
-                
+            creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
         except Exception as e:
-            logger.error(f"Error uploading to Facebook: {e}")
+            logger.error(f"Error loading token from file: {e}")
+
+    # If credentials are not valid or don't exist, fall back to local flow
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            logger.info("Refreshing expired credentials.")
+            creds.refresh(Request())
+        else:
+            # This part will only run if you execute it locally without a token.pickle
+            logger.info("No valid credentials found. Starting local authentication flow.")
+            if not os.path.exists(CREDENTIALS_FILE):
+                logger.error(f"{CREDENTIALS_FILE} not found. This file is required for the initial authentication.")
+                return None
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+            creds = flow.run_local_server(port=0)
+        
+        # Save the credentials for the next run
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(creds.to_json())
+    
+    return build('drive', 'v3', credentials=creds)
+
+def get_uploaded_videos():
+    """Load the list of already uploaded videos."""
+    if os.path.exists(UPLOADED_VIDEOS_FILE):
+        with open(UPLOADED_VIDEOS_FILE, 'r') as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                logger.warning("uploaded_videos.json is corrupted or empty. Starting fresh.")
+                return []
+    return []
+
+def save_uploaded_video(video_id, video_name):
+    """Save video ID to uploaded list."""
+    uploaded_videos = get_uploaded_videos()
+    uploaded_videos.append({
+        'id': video_id,
+        'name': video_name,
+        'uploaded_at': datetime.now().isoformat()
+    })
+    with open(UPLOADED_VIDEOS_FILE, 'w') as f:
+        json.dump(uploaded_videos, f, indent=2)
+
+def get_videos_from_drive(service, folder_id):
+    """Get list of videos from Google Drive folder."""
+    try:
+        logger.info(f"Searching for videos in folder ID: {folder_id}")
+        query = f"'{folder_id}' in parents and mimeType contains 'video/'"
+        results = service.files().list(
+            q=query,
+            pageSize=100, # Get a decent number of files
+            fields="nextPageToken, files(id, name, createdTime)"
+        ).execute()
+        videos = results.get('files', [])
+        logger.info(f"Found {len(videos)} videos in Drive folder.")
+        return videos
+    except HttpError as error:
+        logger.error(f"An error occurred with the Drive API: {error}")
+        return []
+
+def download_video_from_drive(service, video_id, video_name):
+    """Download video from Google Drive into memory."""
+    try:
+        logger.info(f"Downloading video: {video_name} (ID: {video_id})")
+        request = service.files().get_media(fileId=video_id)
+        file_buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(file_buffer, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+            if status:
+                logger.info(f"Download progress: {int(status.progress() * 100)}%")
+        video_data = file_buffer.getvalue()
+        logger.info(f"Successfully downloaded {video_name}, size: {len(video_data) / 1e6:.2f} MB")
+        return video_data
+    except Exception as e:
+        logger.error(f"Error downloading video: {e}")
+        return None
+
+def upload_video_to_facebook(video_data, video_name, page_token, page_id, hashtags):
+    """Upload video to Facebook page."""
+    try:
+        logger.info(f"Uploading {video_name} to Facebook...")
+        url = f"https://graph-video.facebook.com/v19.0/{page_id}/videos" # Use graph-video endpoint
+        post_data = {
+            'access_token': page_token,
+            'title': os.path.splitext(video_name)[0], # Use filename without extension as title
+            'description': hashtags,
+        }
+        files = {
+            'source': (video_name, video_data, 'video/mp4')
+        }
+        response = requests.post(url, data=post_data, files=files, timeout=900) # Increased timeout
+        
+        logger.info(f"Facebook API Response Status: {response.status_code}")
+        response_json = response.json()
+
+        if response.status_code == 200:
+            logger.info(f"✅ Successfully uploaded {video_name} to Facebook! Video ID: {response_json.get('id', 'N/A')}")
+            return True
+        else:
+            logger.error(f"❌ Failed to upload {video_name}. Response: {response_json}")
             return False
+            
+    except Exception as e:
+        logger.error(f"An error occurred while uploading to Facebook: {e}")
+        return False
+
+def main():
+    """Main function to process and upload one new video."""
+    logger.info("--- Starting video upload process ---")
+
+    if not all([GDRIVE_FOLDER_ID, FACEBOOK_PAGE_TOKEN, FACEBOOK_PAGE_ID]):
+        logger.critical("FATAL: Missing one or more required environment variables. Exiting.")
+        return
+
+    drive_service = authenticate_google_drive()
+    if not drive_service:
+        logger.critical("FATAL: Could not authenticate with Google Drive. Exiting.")
+        return
+
+    all_videos = get_videos_from_drive(drive_service, GDRIVE_FOLDER_ID)
+    if not all_videos:
+        logger.info("No videos found in Drive folder. Exiting.")
+        return
+
+    uploaded_video_ids = {v['id'] for v in get_uploaded_videos()}
     
-    def run(self):
-        """Main execution function"""
-        try:
-            # Authenticate with Google Drive
-            service = self.authenticate_google_drive()
-            
-            # Get available videos
-            videos = self.get_videos_from_drive(service)
-            
-            if not videos:
-                logger.info("No new videos found to upload")
-                return
-            
-            # Upload one video (oldest first)
-            video = videos[0]
-            logger.info(f"Processing video: {video['name']}")
-            
-            # Download video
-            video_path = self.download_video(service, video['id'], video['name'])
-            
-            if not video_path:
-                logger.error("Failed to download video")
-                return
-            
-            # Upload to Facebook
-            success = self.upload_to_facebook(video_path, video['name'])
-            
-            if success:
-                # Mark as uploaded
-                self.uploaded_videos.append(video['id'])
-                self.save_uploaded_videos()
-                logger.info(f"Successfully processed video: {video['name']}")
-            
-            # Clean up temporary file
-            if os.path.exists(video_path):
-                os.remove(video_path)
-                
-        except Exception as e:
-            logger.error(f"Error in main execution: {e}")
+    new_videos = [v for v in all_videos if v['id'] not in uploaded_video_ids]
+    
+    if not new_videos:
+        logger.info("No new videos to upload. All are already processed. Exiting.")
+        return
+        
+    # Sort by creation time to upload the oldest video first
+    new_videos.sort(key=lambda x: x.get('createdTime', ''))
+    
+    video_to_upload = new_videos[0]
+    video_id = video_to_upload['id']
+    video_name = video_to_upload['name']
+    
+    logger.info(f"Selected oldest new video to upload: {video_name}")
+
+    video_data = download_video_from_drive(drive_service, video_id, video_name)
+    
+    if video_data:
+        success = upload_video_to_facebook(video_data, video_name, FACEBOOK_PAGE_TOKEN, FACEBOOK_PAGE_ID, HASHTAGS)
+        if success:
+            save_uploaded_video(video_id, video_name)
+            logger.info("✅ Process completed successfully!")
+        else:
+            logger.error("❌ Process failed during Facebook upload.")
+    else:
+        logger.error("❌ Process failed during video download.")
+    logger.info("--- Video upload process finished ---")
 
 if __name__ == "__main__":
-    uploader = FacebookVideoUploader()
-    uploader.run()
+    main()
