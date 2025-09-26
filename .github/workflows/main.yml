@@ -1,43 +1,30 @@
-name: Automated Video Uploader
+name: Upload Video to Facebook Page
+
 on:
+  workflow_dispatch: # Allows you to run the job manually from the Actions tab
   schedule:
-    # These values are in UTC. Example below posts at 5:00 AM IST and 5:00 PM IST:
-    - cron: '30 23 * * *'   # 23:30 UTC = 05:00 IST (next day)
-    - cron: '30 11 * * *'   # 11:30 UTC = 17:00 IST (same day)
-  workflow_dispatch: {}
+    # Runs at 11:30 and 23:30 UTC, which is 5:00 PM and 5:00 AM IST
+    - cron: '30 11,23 * * *'
 
 jobs:
   upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-          
+          python-version: '3.10'
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          
-      - name: Write credentials.json from secret
-        env:
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
-        run: |
-          printf '%s' "$GDRIVE_CREDENTIALS" > credentials.json
-          
-      - name: Generate video list from Google Drive
-        env:
-          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
-        run: python generate_video_list.py
-        
-      - name: Run uploader
+        run: pip install -r requirements.txt
+
+      - name: Run the upload script
         env:
           FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
-          TZ: Asia/Kolkata
-        run: python bot.py
+          GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
+          GDRIVE_TOKEN_BASE64: ${{ secrets.GDRIVE_TOKEN_BASE64 }}
+        run: python bot.py # Make sure to use your script's filename here
