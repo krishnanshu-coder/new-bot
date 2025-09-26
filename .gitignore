@@ -1,4 +1,8 @@
+# Local credential files
+credentials.json
+token.pickle
+uploaded_videos.json
+
+# Python cache
 __pycache__/
-.env
-input.mp4
-clip_*.mp4
+*.pyc
