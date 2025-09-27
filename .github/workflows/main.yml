@@ -1,20 +1,19 @@
 name: Upload Video to Facebook Page
 
 on:
-  workflow_dispatch: # Allows you to run the job manually from the Actions tab
+  workflow_dispatch:
   schedule:
-    # Runs at 11:30 and 23:30 UTC, which is 5:00 PM and 5:00 AM IST
-    - cron: '30 11,23 * * *'
+    - cron: '30 11,23 * * *' # 5 PM and 5 AM IST
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
@@ -27,4 +26,11 @@ jobs:
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
           GDRIVE_TOKEN_BASE64: ${{ secrets.GDRIVE_TOKEN_BASE64 }}
-        run: python bot.py # Make sure to use your script's filename here
+        run: python bot.py # <-- Make sure this is your script's filename
+
+      # <<< --- NEW STEP ADDED BELOW --- >>>
+      - name: Commit and push updated log file
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: Update uploaded videos log"
+          file_pattern: uploaded_videos.json
