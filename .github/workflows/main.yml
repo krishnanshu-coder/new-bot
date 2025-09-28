@@ -1,104 +1,56 @@
-# .github/workflows/main.yml - PRODUCTION VERSION
-# Use this AFTER confirming the testing version works correctly
-
+# DEBUGGING VERSION - Add a step to verify the log file exists before commit
 name: Upload Video to Facebook Page
 
 on:
-  workflow_dispatch: # Manual trigger
+  workflow_dispatch: # Allows you to run the job manually from the Actions tab
   schedule:
-    # PRODUCTION SCHEDULE - 5 AM and 5 PM IST
-    - cron: '30 23 * * *'   # 5:00 AM IST (11:30 PM UTC previous day)  
-    - cron: '30 11 * * *'   # 5:00 PM IST (11:30 AM UTC)
+    # Runs every 15 minutes for easy testing
+    - cron: '*/15 * * * *'
 
 jobs:
   upload:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-    
+      contents: write # Allows the action to write back to the repository
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          
+
       - name: Install dependencies
         run: pip install -r requirements.txt
-        
-      - name: Check current status
-        run: |
-          echo "🌅 SCHEDULED UPLOAD STARTED"
-          echo "Current time: $(date)"
-          echo "IST time: $(TZ='Asia/Kolkata' date)"
-          echo ""
-          
-          if [ -f uploaded_videos.json ]; then
-            UPLOADED_COUNT=$(jq length uploaded_videos.json 2>/dev/null || echo 0)
-            echo "📊 Total videos uploaded: $UPLOADED_COUNT"
-            echo ""
-            echo "🏆 Last uploaded:"
-            jq -r '.[-1] | "   ✅ \(.name) (\(.uploaded_at))"' uploaded_videos.json 2>/dev/null || echo "   (none yet)"
-          else
-            echo "📝 Starting fresh - no previous uploads"
-          fi
-          echo ""
-          
-      - name: Run upload script
+
+      - name: Run the upload script
         env:
           FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
           GDRIVE_TOKEN_BASE64: ${{ secrets.GDRIVE_TOKEN_BASE64 }}
-          HASHTAGS: ${{ secrets.HASHTAGS }}
         run: python bot.py
-        
-      - name: Report upload result
+      
+      # <<< --- NEW DEBUGGING STEP ADDED BELOW --- >>>
+      - name: Verify Log File Before Commit
         run: |
+          echo "--- Verifying workspace before commit ---"
+          echo "Listing all files in the directory:"
+          ls -la
           echo ""
-          echo "🎯 SCHEDULED UPLOAD COMPLETED"
-          echo "Completion time: $(date)"
-          echo "IST time: $(TZ='Asia/Kolkata' date)"
-          echo ""
-          
+          echo "Attempting to display contents of uploaded_videos.json:"
           if [ -f uploaded_videos.json ]; then
-            echo "🎉 Latest upload:"
-            jq -r '.[-1] | "   📹 \(.name)  \n   📅 \(.uploaded_at)"' uploaded_videos.json 2>/dev/null || echo "   ❌ Upload failed"
-            echo ""
-            TOTAL=$(jq length uploaded_videos.json 2>/dev/null || echo 0)
-            echo "📊 Total progress: $TOTAL videos uploaded"
+            cat uploaded_videos.json
           else
-            echo "❌ Upload may have failed - no tracking file found"
+            echo "ERROR: uploaded_videos.json does not exist."
           fi
-          
-          echo ""
-          echo "⏰ Next scheduled upload: 12 hours from now"
-          
-      - name: Commit tracking file
+          echo "--- Verification complete ---"
+
+      - name: Commit and push updated log file
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "📹 Scheduled upload completed - $(TZ='Asia/Kolkata' date '+%Y-%m-%d %I:%M %p IST')"
+          commit_message: "chore: Update uploaded videos log"
           file_pattern: uploaded_videos.json
-          
-      - name: Create upload summary
-        run: |
-          echo "## 🎬 Scheduled Upload Report" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**⏰ Upload Time:** $(date)" >> $GITHUB_STEP_SUMMARY
-          echo "**🇮🇳 IST Time:** $(TZ='Asia/Kolkata' date)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f uploaded_videos.json ]; then
-            TOTAL=$(jq length uploaded_videos.json 2>/dev/null || echo 0)
-            echo "**📊 Total Uploaded:** $TOTAL videos" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**🎯 Today's Upload:**" >> $GITHUB_STEP_SUMMARY
-            jq -r '.[-1] | "- 🎉 **\(.name)**  \n- 📅 \(.uploaded_at)"' uploaded_videos.json 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo "- ❌ Upload failed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "**❌ Status:** Upload failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**⏰ Next Upload:** 12 hours (5 AM or 5 PM IST)" >> $GITHUB_STEP_SUMMARY
+
