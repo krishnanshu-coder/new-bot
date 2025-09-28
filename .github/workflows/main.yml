@@ -30,7 +30,7 @@ jobs:
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
           GDRIVE_FOLDER_ID: ${{ secrets.GDRIVE_FOLDER_ID }}
           GDRIVE_TOKEN_BASE64: ${{ secrets.GDRIVE_TOKEN_BASE64 }}
-        run: python your_script_name.py # Make sure to use your script's filename
+        run: python bot.py # Make sure to use your script's filename
 
       - name: Commit and push updated log file
         uses: stefanzweifel/git-auto-commit-action@v5
