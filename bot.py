@@ -16,7 +16,7 @@ from googleapiclient.http import MediaIoBaseDownload
 FACEBOOK_PAGE_TOKEN = os.getenv('FACEBOOK_PAGE_TOKEN')
 FACEBOOK_PAGE_ID = os.getenv('FACEBOOK_PAGE_ID')
 GDRIVE_FOLDER_ID = os.getenv('GDRIVE_FOLDER_ID')
-HASHTAGS = os.getenv('HASHTAGS', '#comedy #viral #reels #viral #comedy #fyp #thekapilsharmashow #tkss #kapilsharma #kapilsharmacomedy #sunilgrover #drmashoorgulati #indiancomedy #shahrukhkhan #srk #bollywoodcomedy')
+HASHTAGS = os.getenv('HASHTAGS', 'Muh Dikhayii Another Part #comedy #viral #reels #comedy #fyp  #tkss #kapilsharma  #sunilgrover #drmashoorgulati #indiancomedy #shahrukhkhan #srk #bollywoodcomedy')
 GDRIVE_TOKEN_BASE64 = os.getenv('GDRIVE_TOKEN_BASE64')
 
 # --- Constants ---
@@ -187,5 +187,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
