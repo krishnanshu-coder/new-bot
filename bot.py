@@ -17,7 +17,7 @@ FACEBOOK_PAGE_TOKEN = os.getenv('FACEBOOK_PAGE_TOKEN')
 FACEBOOK_PAGE_ID = os.getenv('FACEBOOK_PAGE_ID')
 GDRIVE_FOLDER_ID = os.getenv('GDRIVE_FOLDER_ID')
 HASHTAGS = os.getenv('HASHTAGS', '#video #upload')
-GDRIVE_TOKEN_BASE_64 = os.getenv('GDRIVE_TOKEN_BASE_64')
+GDRIVE_TOKEN_BASE64 = os.getenv('GDRIVE_TOKEN_BASE64')
 
 # --- Constants ---
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
@@ -33,10 +33,10 @@ def authenticate_google_drive():
     """Authenticate and return Google Drive service."""
     creds = None
     
-    if GDRIVE_TOKEN_BASE_64:
+    if GDRIVE_TOKEN_BASE64:
         logger.info("Found Base64 token. Decoding to token.pickle file.")
         try:
-            decoded_token = base64.b64decode(GDRIVE_TOKEN_BASE_64)
+            decoded_token = base64.b64decode(GDRIVE_TOKEN_BASE64)
             with open(TOKEN_FILE, 'wb') as token:
                 token.write(decoded_token)
         except Exception as e:
@@ -169,13 +169,13 @@ def main():
         logger.info("No new videos to upload.")
         return
         
-    # --- THIS IS THE ONLY CHANGE ---
-    # Sort videos by filename in alphabetical order
-    new_videos.sort(key=lambda x: x.get('name', ''))
+    # --- THIS IS THE ORIGINAL SORTING LOGIC ---
+    # Sort videos by creation time in ascending order (oldest first)
+    new_videos.sort(key=lambda x: x.get('createdTime', ''))
     
     video_to_upload = new_videos[0]
     
-    logger.info(f"Selected next video by filename: {video_to_upload['name']}")
+    logger.info(f"Selected oldest video to upload: {video_to_upload['name']}")
 
     video_data = download_video_from_drive(drive_service, video_to_upload['id'], video_to_upload['name'])
     
