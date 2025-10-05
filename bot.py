@@ -16,7 +16,7 @@ from googleapiclient.http import MediaIoBaseDownload
 FACEBOOK_PAGE_TOKEN = os.getenv('FACEBOOK_PAGE_TOKEN')
 FACEBOOK_PAGE_ID = os.getenv('FACEBOOK_PAGE_ID')
 GDRIVE_FOLDER_ID = os.getenv('GDRIVE_FOLDER_ID')
-HASHTAGS = os.getenv('HASHTAGS', 'Muh Dikhayii Another Part #comedy #viral #reels #comedy #fyp  #tkss #kapilsharma  #sunilgrover #drmashoorgulati #indiancomedy #shahrukhkhan #srk #bollywoodcomedy')
+HASHTAGS = os.getenv('HASHTAGS', '#SouthIndianCinema #SouthMovies #IndianCinema #MovieClips #Cinema #WhatToWatch #FacebookVideo #FacebookReels #Tollywood #TeluguCinema #Telugu #TeluguMovie #Kollywood #TamilCinema #Tamil #TamilMovie #Mollywood #MalayalamCinema #Malayalam #MalayalamMovie #Sandalwood #KannadaCinema #Kannada #KannadaMovie #Prabhas #AlluArjun #Yash #RamCharan #JrNTR #ThalapathyVijay #AjithKumar #Rajinikanth #KamalHaasan #Suriya #MaheshBabu #DulquerSalmaan #FahadhFaasil #AlluArjunFans #VijayFans #PrabhasFC #KGF #Pushpa #Salaar #Leo #Vikram #Action #ActionMovies #FightScene #MassScene #Goosebumps #BGM #MassBGM #BackgroundMusic #MovieSongs #Anirudh #Comedy #ComedyClips #EmotionalScene #Love #Romantic #LoveSongs #Dialogue #MassDialogue #MovieQuotes #Viral #Trending #ViralVideo #Explore #ExplorePage #MustWatch #Reels')
 GDRIVE_TOKEN_BASE64 = os.getenv('GDRIVE_TOKEN_BASE64')
 
 # --- Constants ---
@@ -187,6 +187,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
