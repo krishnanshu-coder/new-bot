@@ -130,7 +130,7 @@ def upload_video_to_facebook(video_data, video_name, page_token, page_id, hashta
             'title': os.path.splitext(video_name)[0],
             'description': hashtags,
         }
-        files = {'source': (video_name, video_data, 'video/mp4')}
+        files = {'source': (video_name, video_data, 'video/mp4/mkv')}
         response = requests.post(url, data=post_data, files=files, timeout=900)
         
         response_json = response.json()
@@ -187,6 +187,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
